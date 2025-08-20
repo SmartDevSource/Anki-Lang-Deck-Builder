@@ -1,0 +1,16 @@
+VOICE_BY_LANG_AND_SEX = {
+    "Italien (Homme)": "it-IT-DiegoNeural",
+    "Italien (Femme)": "it-IT-ElsaNeural",
+    "Russe (Homme)": "ru-RU-DmitryNeural",
+    "Russe (Femme)": "ru-RU-SvetlanaNeural",
+    "Français (Homme)": "fr-CH-FabriceNeural",
+    "Français (Femme)": "fr-CH-ArianeNeural",
+    "Anglais (Homme)": "en-GB-RyanNeural",
+    "Anglais (Femme)": "en-GB-SoniaNeural",
+    "Portugais (Homme)": "pt-PT-DuarteNeural",
+    "Portugais (Femme)": "pt-PT-RaquelNeural",
+    "Espagnol (Homme)": "es-ES-AlvaroNeural",
+    "Espagnol (Femme)": "es-ES-ElviraNeural",
+    "Allemand (Homme)": "de-DE-ConradNeural",
+    "Allemand (Femme)": "de-DE-KatjaNeural",
+}
