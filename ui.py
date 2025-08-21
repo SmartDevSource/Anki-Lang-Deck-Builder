@@ -19,8 +19,8 @@ class UI(tk.Frame):
         self.output_dir = os.getcwd()
         self.cards = []
         self.is_playing = False
-        self.editing_index = None  # Index de la carte en cours d'édition
-        self.current_language = "English"  # Langue par défaut
+        self.editing_index = None
+        self.current_language = "English"
         self.build()
 
     def build(self):
@@ -79,20 +79,17 @@ class UI(tk.Frame):
         # Colonne droite pour les temporary cards (plus étroite)
         right_frame = tk.Frame(main_frame, bg="#f9f1da", width=370)
         right_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
-        right_frame.pack_propagate(False)  # Maintient la largeur fixe
-
-        # Stocker les références des frames pour la mise à jour
+        right_frame.pack_propagate(False)
+    
         self.left_frame = left_frame
         self.right_frame = right_frame
         
         self.create_widgets()
 
     def get_text(self, key, **kwargs):
-        """Récupère le texte dans la langue actuelle"""
         return get_text(self.current_language, key, **kwargs)
 
     def change_language(self, language):
-        """Change la langue de l'interface"""
         self.current_language = language
         self.update_interface()
 
@@ -104,7 +101,6 @@ class UI(tk.Frame):
         char = event.char.lower()
         if not char.isalpha():
             return
-        # Parcourt toutes les entrées du menu
         for index in range(self.language_menu.index("end") + 1):
             label = self.language_menu.entrycget(index, "label")
             if label.lower().startswith(char):
