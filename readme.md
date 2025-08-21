@@ -1,0 +1,1 @@
+python -m PyInstaller --clean --onefile --windowed --name ALDB --icon res/anki_ico.ico main.py
