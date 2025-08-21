@@ -11,6 +11,7 @@ import re
 from src.voices import VOICE_BY_LANG_AND_SEX
 from src.tts import generate_mp3
 from src.languages import get_available_languages, get_text
+from src.about import show_about
 
 class UI(tk.Frame):
     def __init__(self, master):
@@ -68,6 +69,8 @@ class UI(tk.Frame):
         self.menubar = menubar
         self.language_menu = language_menu
         self.file_menu = file_menu
+
+        menubar.add_command(label=self.get_text("about"), command=self.show_about)
 
         # Frame principal avec deux colonnes
         main_frame = tk.Frame(self.master, bg="#f9f1da")
@@ -310,6 +313,13 @@ class UI(tk.Frame):
         new_menubar.add_cascade(label=self.get_text("language"), menu=self.language_menu)
         self.language_menu.bind("<Key>", self._language_type_ahead)
 
+        # === Bouton de menu "About / À propos" ===
+        new_menubar.add_command(label=self.get_text("about"), command=self.show_about)
+
+        # Applique le nouveau menubar
+        self.master.config(menu=new_menubar)
+        self.menubar = new_menubar
+
         # Boutons radio pour les langues
         for lang in get_available_languages():
             self.language_menu.add_radiobutton(
@@ -341,6 +351,8 @@ class UI(tk.Frame):
 
         self.generate_btn.config(text=self.get_text("generate_deck"))
 
+    def show_about(self):
+        show_about(self.master, self.get_text)
 
     def browse(self):
         d = filedialog.askdirectory(initialdir=self.output_dir)

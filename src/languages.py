@@ -45,7 +45,12 @@ LANGUAGES = {
         "load_csv_title": "Load CSV file",
         "save_csv_title": "Save CSV file",
         "csv_files": "CSV files",
-        "all_files": "All files"
+        "all_files": "All files",
+        "about": "About",
+        "about_title": "About",
+        "close": "Close",
+        "cancel": "Cancel",
+        "about_text": "Made with love by Emmanuel Beaugendre\nfor my friends from the Anki community ! :-)"
     },
     "Français": {
         "title": "Anki Lang Deck Builder",
@@ -93,7 +98,12 @@ LANGUAGES = {
         "load_csv_title": "Charger un fichier CSV",
         "save_csv_title": "Sauvegarder un fichier CSV",
         "csv_files": "Fichiers CSV",
-        "all_files": "Tous les fichiers"
+        "all_files": "Tous les fichiers",
+        "about": "À propos",
+        "about_title": "À propos",
+        "close": "Fermer",
+        "cancel": "Annuler",
+        "about_text": "Fait avec amour par Emmanuel Beaugendre\npour mes amis de la communauté d'Anki ! :-)"
     }
 }
 
