@@ -24,6 +24,8 @@ class UI(tk.Frame):
         self.current_language = "English"
         self.loading_win = None
         self._loading_pb = None
+        self.generate_source_audio = tk.BooleanVar(value=False)
+        self.generate_target_audio = tk.BooleanVar(value=True)
         self.build()
         
     def build(self):
@@ -173,12 +175,22 @@ class UI(tk.Frame):
         if french_voices:
             self.source_voice_combo.set(french_voices[0])
 
-        # --- En-tête "Source Text" avec boutons Coller et Vider à droite ---
+        # En-tête "Source Text" avec checkbox et boutons
         src_header = tk.Frame(self.left_frame, bg="#f9f1da")
         src_header.pack(fill="x", pady=(0, 2))
 
         self.source_text_label = tk.Label(src_header, text=self.get_text("source_text"), bg="#f9f1da")
         self.source_text_label.pack(side="left")
+
+        # NOUVELLE CHECKBOX SOURCE
+        self.source_audio_check = tk.Checkbutton(
+            src_header, 
+            text="🔊", 
+            variable=self.generate_source_audio,
+            bg="#f9f1da",
+            font=("Segoe UI", 12)
+        )
+        self.source_audio_check.pack(side="left", padx=(10, 0))
 
         src_btns = tk.Frame(src_header, bg="#f9f1da")
         src_btns.pack(side="right")
@@ -224,12 +236,22 @@ class UI(tk.Frame):
         if english_voices:
             self.target_voice_combo.set(english_voices[0])
 
-        # --- En-tête "Translation" avec boutons Coller et Vider à droite ---
+        # En-tête "Translation" avec checkbox et boutons
         tgt_header = tk.Frame(self.left_frame, bg="#f9f1da")
         tgt_header.pack(fill="x", pady=(0, 2))
 
         self.translation_label = tk.Label(tgt_header, text=self.get_text("translation"), bg="#f9f1da")
         self.translation_label.pack(side="left")
+
+        # NOUVELLE CHECKBOX TARGET
+        self.target_audio_check = tk.Checkbutton(
+            tgt_header, 
+            text="🔊", 
+            variable=self.generate_target_audio,
+            bg="#f9f1da",
+            font=("Segoe UI", 12)
+        )
+        self.target_audio_check.pack(side="left", padx=(10, 0))
 
         tgt_btns = tk.Frame(tgt_header, bg="#f9f1da")
         tgt_btns.pack(side="right")
@@ -261,12 +283,13 @@ class UI(tk.Frame):
         # Bouton dynamique Add/Apply
         self.add_apply_btn = tk.Button(self.left_frame, text=self.get_text("add_to_list"),
                                     command=self.add_or_apply_card, font=("Segoe UI", 10, "bold"))
-        self.add_apply_btn.pack(fill="x", pady=(0, 10))
+        self.add_apply_btn.pack(fill="x", pady=(0, 15))
 
+        # Bouton de génération
         self.generate_btn = tk.Button(self.left_frame, text=self.get_text("generate_deck"),
                                     command=self.generate, font=("Segoe UI", 10, "bold"),
                                     bg="white", fg="black")
-        self.generate_btn.pack(side="bottom", fill="x", pady=15)
+        self.generate_btn.pack(fill="x")
 
         # === COLONNE DROITE ===
         self.temp_cards_label = tk.Label(self.right_frame, text=self.get_text("temp_cards"),
@@ -892,7 +915,6 @@ class UI(tk.Frame):
         self.loading_win = None
         self._loading_pb = None
 
-
     def generate(self):
         import genanki
         import hashlib
@@ -904,6 +926,11 @@ class UI(tk.Frame):
             return
         if not self.cards:
             messagebox.showerror(self.get_text("error"), self.get_text("no_cards"))
+            return
+
+        # NOUVELLE VÉRIFICATION CHECKBOXES
+        if not self.generate_source_audio.get() and not self.generate_target_audio.get():
+            messagebox.showerror(self.get_text("error"), "At least one audio generation option must be enabled.")
             return
 
         # Fenêtre de chargement
@@ -944,14 +971,16 @@ class UI(tk.Frame):
                         else:
                             src, tgt, source_voice_key, target_voice_key = card
 
-                        # target (obligatoire)
-                        target_mp3 = await generate_mp3(tgt, VOICE_BY_LANG_AND_SEX[target_voice_key], self.output_dir)
-                        media_files.append(os.path.join(self.output_dir, target_mp3))
-                        target_audio_tag = f"[sound:{target_mp3}]"
+                        # GÉNÉRATION CONDITIONNELLE TARGET AUDIO
+                        target_audio_tag = ""
+                        if self.generate_target_audio.get() and target_voice_key:
+                            target_mp3 = await generate_mp3(tgt, VOICE_BY_LANG_AND_SEX[target_voice_key], self.output_dir)
+                            media_files.append(os.path.join(self.output_dir, target_mp3))
+                            target_audio_tag = f"[sound:{target_mp3}]"
 
-                        # source (optionnelle)
+                        # GÉNÉRATION CONDITIONNELLE SOURCE AUDIO
                         source_audio_tag = ""
-                        if source_voice_key and source_voice_key in VOICE_BY_LANG_AND_SEX:
+                        if self.generate_source_audio.get() and source_voice_key and source_voice_key in VOICE_BY_LANG_AND_SEX:
                             source_mp3 = await generate_mp3(src, VOICE_BY_LANG_AND_SEX[source_voice_key], self.output_dir)
                             media_files.append(os.path.join(self.output_dir, source_mp3))
                             source_audio_tag = f"[sound:{source_mp3}]"
