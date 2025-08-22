@@ -19,11 +19,11 @@ VOICE_BY_LANG_AND_SEX = {
     "🇸🇦 Arabic (Female)": "ar-SA-ZariyahNeural",
     "🇯🇵 Japanese (Male)": "ja-JP-KeitaNeural",
     "🇯🇵 Japanese (Female)": "ja-JP-NanamiNeural",
-    "🇨🇳 Chinese Mandarin (Male)": "zh-CN-YunzeNeural",
+    "🇨🇳 Chinese Mandarin (Male)": "zh-CN-YunjianNeural",
     "🇨🇳 Chinese Mandarin (Female)": "zh-CN-XiaoxiaoNeural",
     "🇰🇷 Korean (Male)": "ko-KR-InJoonNeural",
     "🇰🇷 Korean (Female)": "ko-KR-SunHiNeural",
     "🇹🇷 Turkish (Male Only)": "tr-TR-AhmetNeural",
-    "🇳🇱 Dutch (Male)": "nl-NL-CoenNeural",
+    "🇳🇱 Dutch (Male)": "nl-NL-MaartenNeural",
     "🇳🇱 Dutch (Female)": "nl-NL-FennaNeural",
 }
