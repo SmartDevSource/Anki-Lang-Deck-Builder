@@ -632,19 +632,94 @@ class UI(tk.Frame):
                 src, tgt, target_voice_key = card
                 source_voice_key = ""
             
+            # Charger les textes
             self.src_txt.delete("1.0", tk.END)
             self.tgt_txt.delete("1.0", tk.END)
             self.src_txt.insert(tk.END, src)
             self.tgt_txt.insert(tk.END, tgt)
             
-            if source_voice_key:
+            # CORRECTION : Vérifier que les voix existent avant de les définir
+            if source_voice_key and source_voice_key in VOICE_BY_LANG_AND_SEX:
                 self.source_voice_var.set(source_voice_key)
-            if target_voice_key:
+            elif source_voice_key:
+                # Si la voix n'existe plus, essayer de trouver une alternative similaire
+                print(f"Voix source '{source_voice_key}' non trouvée, recherche d'alternative...")
+                alternative = self._find_alternative_voice(source_voice_key)
+                if alternative:
+                    self.source_voice_var.set(alternative)
+                    print(f"Alternative trouvée: {alternative}")
+                else:
+                    print("Aucune alternative trouvée, voix source réinitialisée")
+            
+            if target_voice_key and target_voice_key in VOICE_BY_LANG_AND_SEX:
                 self.target_voice_var.set(target_voice_key)
+            elif target_voice_key:
+                # Si la voix n'existe plus, essayer de trouver une alternative similaire
+                print(f"Voix cible '{target_voice_key}' non trouvée, recherche d'alternative...")
+                alternative = self._find_alternative_voice(target_voice_key)
+                if alternative:
+                    self.target_voice_var.set(alternative)
+                    print(f"Alternative trouvée: {alternative}")
+                else:
+                    # Fallback vers voix anglaise par défaut
+                    english_voices = [v for v in VOICE_BY_LANG_AND_SEX.keys() if "English" in v]
+                    if english_voices:
+                        self.target_voice_var.set(english_voices[0])
+                        print(f"Fallback vers voix anglaise: {english_voices[0]}")
             
             # Passer en mode édition
             self.editing_index = index
             self.add_apply_btn.config(text=self.get_text("apply_changes"))
+
+    def _find_alternative_voice(self, missing_voice):
+        """Trouve une voix alternative similaire à celle manquante"""
+        if not missing_voice:
+            return None
+            
+        missing_lower = missing_voice.lower()
+        
+        # Extraction des caractéristiques de la voix manquante
+        is_male = 'male' in missing_lower and 'female' not in missing_lower
+        is_female = 'female' in missing_lower
+        
+        # Recherche par langue
+        language_indicators = {
+            'italian': ['italian', 'it'],
+            'russian': ['russian', 'ru'], 
+            'french': ['french', 'fr'],
+            'english': ['english', 'en', 'gb'],
+            'portuguese': ['portuguese', 'pt'],
+            'spanish': ['spanish', 'es'],
+            'german': ['german', 'de'],
+            'polish': ['polish', 'pl'],
+            'arabic': ['arabic', 'ar'],
+            'japanese': ['japanese', 'ja'],
+            'chinese': ['chinese', 'cn', 'zh'],
+            'korean': ['korean', 'ko'],
+            'turkish': ['turkish', 'tr'],
+            'dutch': ['dutch', 'nl']
+        }
+        
+        # Détecter la langue
+        detected_language = None
+        for lang, indicators in language_indicators.items():
+            if any(ind in missing_lower for ind in indicators):
+                detected_language = lang
+                break
+        
+        if detected_language:
+            # Chercher une voix de cette langue avec le bon sexe
+            for voice_key in VOICE_BY_LANG_AND_SEX.keys():
+                voice_lower = voice_key.lower()
+                if detected_language in voice_lower:
+                    if is_male and 'male' in voice_lower and 'female' not in voice_lower:
+                        return voice_key
+                    elif is_female and 'female' in voice_lower:
+                        return voice_key
+                    elif not is_male and not is_female:
+                        return voice_key
+        
+        return None
 
     def remove_selected(self, event):
         """Supprime la carte sélectionnée avec la touche DEL"""
@@ -680,17 +755,22 @@ class UI(tk.Frame):
                 reader = csv.DictReader(f, delimiter=";")
                 headers = reader.fieldnames
                 
-                # Vérification stricte de la structure
-                expected_headers = ["Front", "Back", "Audio", "SourceAudio", "TargetAudio"]
-                if not headers or set(headers) != set(expected_headers):
+                # Vérification de la structure (flexible pour rétrocompatibilité)
+                required_headers = ["Front", "Back", "Audio", "SourceAudio", "TargetAudio"]
+                optional_headers = ["SourceVoice", "TargetVoice"]
+                
+                if not headers or not all(h in headers for h in required_headers):
                     messagebox.showerror(
                         self.get_text("invalid_csv_structure"), 
                         self.get_text("invalid_csv_msg").format(
-                            expected=', '.join(expected_headers),
+                            expected=', '.join(required_headers + optional_headers),
                             found=', '.join(headers) if headers else 'None'
                         )
                     )
                     return
+                
+                # Détection du format (nouveau avec SourceVoice/TargetVoice ou ancien)
+                has_voice_columns = "SourceVoice" in headers and "TargetVoice" in headers
                 
                 # Lecture des données
                 loaded_cards = []
@@ -702,7 +782,6 @@ class UI(tk.Frame):
                     # Vérification que les champs obligatoires sont présents
                     front = row.get("Front", "").strip()
                     back = row.get("Back", "").strip()
-                    target_audio = row.get("TargetAudio", "").strip()
                     
                     if not front or not back:
                         messagebox.showerror(
@@ -713,16 +792,26 @@ class UI(tk.Frame):
                         )
                         return
                     
-                    # Extraction des voix à partir des champs audio
-                    source_voice = self._extract_voice_from_audio(row.get("SourceAudio", ""))
-                    target_voice = self._extract_voice_from_audio(target_audio)
+                    # Extraction des voix
+                    if has_voice_columns:
+                        # NOUVEAU FORMAT : lire directement depuis les colonnes
+                        source_voice = row.get("SourceVoice", "").strip()
+                        target_voice = row.get("TargetVoice", "").strip()
+                    else:
+                        # ANCIEN FORMAT : essayer d'extraire depuis les noms de fichiers
+                        source_voice = self._extract_voice_from_audio(row.get("SourceAudio", ""))
+                        target_voice = self._extract_voice_from_audio(row.get("TargetAudio", ""))
                     
-                    if not target_voice:
-                        # Si on ne peut pas extraire la voix, utiliser la voix par défaut
-                        target_voice = self.target_voice_var.get()
-                        if not target_voice:
-                            english_voices = [v for v in VOICE_BY_LANG_AND_SEX.keys() if "English" in v or "en-" in v.lower()]
-                            target_voice = english_voices[0] if english_voices else list(VOICE_BY_LANG_AND_SEX.keys())[0]
+                    # Validation des voix (vérifier qu'elles existent)
+                    if source_voice and source_voice not in VOICE_BY_LANG_AND_SEX:
+                        print(f"Avertissement: Voix source '{source_voice}' non trouvée, ignorée")
+                        source_voice = ""
+                    
+                    if target_voice and target_voice not in VOICE_BY_LANG_AND_SEX:
+                        print(f"Avertissement: Voix cible '{target_voice}' non trouvée")
+                        # Fallback vers une voix anglaise par défaut
+                        english_voices = [v for v in VOICE_BY_LANG_AND_SEX.keys() if "English" in v or "en-" in v.lower()]
+                        target_voice = english_voices[0] if english_voices else list(VOICE_BY_LANG_AND_SEX.keys())[0]
                     
                     loaded_cards.append((front, back, source_voice, target_voice))
                 
@@ -735,33 +824,79 @@ class UI(tk.Frame):
                 self.add_apply_btn.config(text=self.get_text("add_to_list"))
                 self.clear_inputs()
                 
-                messagebox.showinfo(self.get_text("success"), self.get_text("cards_loaded").format(
-                    count=len(loaded_cards), path=file_path
-                ))
+                format_info = "nouveau format" if has_voice_columns else "ancien format"
+                messagebox.showinfo(self.get_text("success"), 
+                    f"Cartes chargées ({format_info}): {len(loaded_cards)} depuis {file_path}")
                 
         except UnicodeDecodeError:
             messagebox.showerror(self.get_text("encoding_error"), self.get_text("encoding_error_msg"))
         except Exception as e:
             messagebox.showerror(self.get_text("error"), self.get_text("load_error").format(error=str(e)))
 
+
     def _extract_voice_from_audio(self, audio_field):
-        """Extrait le nom de la voix à partir du nom de fichier audio"""
+        """Extrait le nom de la voix à partir du nom de fichier audio (adapté à vos langues)"""
         if not audio_field or "[sound:" not in audio_field:
             return ""
         
-        # Extraction du nom de fichier depuis [sound:filename.mp3]
         try:
             match = re.search(r'\[sound:([^\]]+)\]', audio_field)
             if match:
                 filename = match.group(1)
-                # Le nom de fichier devrait contenir des infos sur la voix
-                # On essaie de retrouver une voix correspondante
+                filename_lower = filename.lower().replace('_', ' ').replace('-', ' ')
+                
+                # Mapping des mots-clés vers vos langues spécifiques
+                language_patterns = {
+                    'italian': ['italian', 'it', 'italia', 'italien'],
+                    'russian': ['russian', 'ru', 'russia', 'russe'],
+                    'french': ['french', 'fr', 'france', 'francais'],
+                    'english': ['english', 'en', 'gb', 'uk', 'anglais'],
+                    'portuguese': ['portuguese', 'pt', 'portugal', 'portugais'],
+                    'spanish': ['spanish', 'es', 'spain', 'espanol', 'espagnol'],
+                    'german': ['german', 'de', 'deutsch', 'allemand'],
+                    'polish': ['polish', 'pl', 'poland', 'polonais'],
+                    'arabic': ['arabic', 'ar', 'sa', 'arabe'],
+                    'japanese': ['japanese', 'ja', 'jp', 'japan', 'japonais'],
+                    'chinese': ['chinese', 'cn', 'zh', 'mandarin', 'chinois'],
+                    'korean': ['korean', 'ko', 'kr', 'korea', 'coreen'],
+                    'turkish': ['turkish', 'tr', 'turkey', 'turc'],
+                    'dutch': ['dutch', 'nl', 'netherlands', 'neerlandais']
+                }
+                
+                # Détection du sexe
+                is_male = any(word in filename_lower for word in ['male', 'man', 'homme', 'masculin'])
+                is_female = any(word in filename_lower for word in ['female', 'woman', 'femme', 'feminin'])
+                
+                # Recherche par langue détectée
+                for lang_key, patterns in language_patterns.items():
+                    if any(pattern in filename_lower for pattern in patterns):
+                        # Recherche de la voix correspondante dans votre dictionnaire
+                        for voice_key in VOICE_BY_LANG_AND_SEX.keys():
+                            voice_lower = voice_key.lower()
+                            
+                            # Vérification de la langue
+                            if lang_key in voice_lower:
+                                # Si on peut déterminer le sexe, on le prend en compte
+                                if is_male and 'male' in voice_lower and 'female' not in voice_lower:
+                                    return voice_key
+                                elif is_female and 'female' in voice_lower:
+                                    return voice_key
+                                elif not is_male and not is_female:
+                                    # Si pas de sexe spécifié, prendre la première voix de cette langue
+                                    return voice_key
+                
+                # Fallback: recherche directe par correspondance partielle
                 for voice_key in VOICE_BY_LANG_AND_SEX.keys():
-                    # Recherche basique - peut être améliorée selon votre logique de nommage
-                    if any(part in filename.lower() for part in voice_key.lower().split()):
-                        return voice_key
-        except:
-            pass
+                    voice_clean = voice_key.lower().replace('🇮🇹', '').replace('🇷🇺', '').replace('🇫🇷', '').replace('🇬🇧', '').replace('🇵🇹', '').replace('🇪🇸', '').replace('🇩🇪', '').replace('🇵🇱', '').replace('🇸🇦', '').replace('🇯🇵', '').replace('🇨🇳', '').replace('🇰🇷', '').replace('🇹🇷', '').replace('🇳🇱', '').strip()
+                    
+                    # Chercher les mots communs
+                    voice_words = voice_clean.split()
+                    if len(voice_words) >= 2:
+                        if voice_words[0] in filename_lower and voice_words[1] in filename_lower:
+                            return voice_key
+                            
+        except Exception as e:
+            print(f"Erreur extraction voix: {e}")
         
         return ""
 
@@ -788,7 +923,7 @@ class UI(tk.Frame):
             self.listbox.insert(tk.END, display_text)
 
     def save_csv(self):
-        """Sauvegarde les cartes actuelles dans un fichier CSV"""
+        """Sauvegarde les cartes actuelles dans un fichier CSV avec métadonnées de voix"""
         if not self.cards:
             messagebox.showerror(self.get_text("error"), self.get_text("no_cards_to_save"))
             return
@@ -804,18 +939,18 @@ class UI(tk.Frame):
             return
         
         try:
-            # Génération des données temporaires (sans audio) pour la sauvegarde
+            # Génération des données avec métadonnées de voix intégrées
             rows = []
-            for card in self.cards:
+            for i, card in enumerate(self.cards):
                 if len(card) == 4:
                     src, tgt, source_voice_key, target_voice_key = card
                 else:
                     src, tgt, target_voice_key = card
                     source_voice_key = ""
                 
-                # Création des champs audio avec noms de fichiers temporaires
-                target_audio_name = f"{target_voice_key.replace(' ', '_')}_{hash(tgt) % 10000}.mp3"
-                source_audio_name = f"{source_voice_key.replace(' ', '_')}_{hash(src) % 10000}.mp3" if source_voice_key else ""
+                # Création des champs audio avec les noms de voix intégrés
+                target_audio_name = f"{target_voice_key.replace(' ', '_')}_{i}_target.mp3"
+                source_audio_name = f"{source_voice_key.replace(' ', '_')}_{i}_source.mp3" if source_voice_key else ""
                 
                 audio_field = f"[sound:{target_audio_name}]"
                 if source_audio_name:
@@ -826,11 +961,14 @@ class UI(tk.Frame):
                     "Back": tgt,
                     "Audio": audio_field,
                     "SourceAudio": f"[sound:{source_audio_name}]" if source_audio_name else "",
-                    "TargetAudio": f"[sound:{target_audio_name}]"
+                    "TargetAudio": f"[sound:{target_audio_name}]",
+                    # NOUVEAUX CHAMPS pour stocker explicitement les voix
+                    "SourceVoice": source_voice_key,
+                    "TargetVoice": target_voice_key
                 })
             
-            # Écriture du fichier
-            fieldnames = ["Front", "Back", "Audio", "SourceAudio", "TargetAudio"]
+            # Écriture du fichier avec les nouveaux champs
+            fieldnames = ["Front", "Back", "Audio", "SourceAudio", "TargetAudio", "SourceVoice", "TargetVoice"]
             with open(file_path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=";")
                 writer.writeheader()
@@ -843,6 +981,7 @@ class UI(tk.Frame):
             
         except Exception as e:
             messagebox.showerror(self.get_text("error"), self.get_text("save_error").format(error=str(e)))
+
 
     def _show_loading_dialog(self, msg="Chargement…"):
         """Affiche une fenêtre modale avec une barre de progression indéterminée (centrée)."""
