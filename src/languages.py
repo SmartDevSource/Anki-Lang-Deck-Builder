@@ -50,7 +50,7 @@ LANGUAGES = {
         "about_title": "About",
         "close": "Close",
         "cancel": "Cancel",
-        "about_text": "Made with love by Emmanuel Beaugendre\nfor my friends from the Anki community ! :-)"
+        "about_text": "Made with love by Emmanuel B.\nfor my friends from the Anki community ! :-)"
     },
     "Français": {
         "title": "Anki Lang Deck Builder",
@@ -103,7 +103,7 @@ LANGUAGES = {
         "about_title": "À propos",
         "close": "Fermer",
         "cancel": "Annuler",
-        "about_text": "Fait avec amour par Emmanuel Beaugendre\npour mes amis de la communauté d'Anki ! :-)"
+        "about_text": "Fait avec amour par Emmanuel B.\npour mes amis de la communauté d'Anki ! :-)"
     }
 }
 
